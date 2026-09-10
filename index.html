@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>点菜小程序</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin:0;
+            padding:0;
+            font-family: system-ui, sans-serif;
+        }
+        body{
+            background:#f7f7f7;
+            padding:16px;
+        }
+        .container{
+            max-width:1000px;
+            margin:0 auto;
+        }
+        h1{
+            text-align:center;
+            color:#333;
+            margin-bottom:20px;
+        }
+        .row{
+            display:grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap:12px;
+            margin-bottom:24px;
+        }
+        .card{
+            background:#fff;
+            border-radius:12px;
+            padding:16px;
+            box-shadow:0 2px 8px #00000012;
+        }
+        .card h2{
+            font-size:18px;
+            margin-bottom:12px;
+            color:#d63031;
+            border-bottom:1px solid #eee;
+            padding-bottom:8px;
+        }
+        .item{
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            padding:8px 0;
+            border-bottom: #f1f1f1 1px solid;
+        }
+        .item:last-child{border:none;}
+        .item-name{flex:1;}
+        .btn-group{
+            display:flex;
+            gap:6px;
+        }
+        button{
+            border:none;
+            border-radius:6px;
+            padding:4px 10px;
+            cursor:pointer;
+            font-size:16px;
+        }
+        .add{background:#00b894;color:white;}
+        .minus{background:#fdcb6e;color:#222;}
+        .del{background:#e17055;color:white;}
+        .order-box{
+            background:#fff;
+            border-radius:12px;
+            padding:20px;
+            margin-top:20px;
+        }
+        .order-box h2{margin-bottom:12px;color:#2d3436;}
+        .order-item{
+            padding:6px 0;
+        }
+        .empty{color:#999;}
+        .submit-area{
+            margin-top:16px;
+            display:flex;
+            gap:10px;
+        }
+        #submitBtn{
+            background:#0984e3;
+            color:white;
+            flex:1;
+            padding:10px;
+            font-size:16px;
+        }
+        #clearBtn{
+            background:#636e72;
+            color:white;
+            padding:10px;
+            font-size:16px;
+        }
+        .tip{
+            margin-top:10px;
+            color:#00b894;
+            font-size:14px;
+            display:none;
+        }
+        .input-wrap{
+            margin-bottom:12px;
+        }
+        .input-wrap label{
+            display:block;
+            margin-bottom:4px;
+            color:#444;
+        }
+        .input-wrap input, .input-wrap textarea{
+            width:100%;
+            border:1px solid #ddd;
+            border-radius:8px;
+            padding:10px;
+            font-size:16px;
+        }
+        .input-wrap textarea{
+            resize:none;
+            height:80px;
+        }
+        @media (max-width:720px){
+            .row{grid-template-columns:1fr;}
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>点菜小程序</h1>
+        <div class="row">
+            <!-- 素菜系列 -->
+            <div class="card">
+                <h2>🥬 素菜系列</h2>
+                <div class="menu-list" id="vegetable">
+                </div>
+            </div>
+            <!-- 荤菜系列 -->
+            <div class="card">
+                <h2>🥩 荤菜系列</h2>
+                <div class="menu-list" id="meat">
+                </div>
+            </div>
+            <!-- 一锅出系列 -->
+            <div class="card">
+                <h2>🍲 一锅出系列</h2>
+                <div class="menu-list" id="onepot">
+                </div>
+            </div>
+        </div>
+        <!-- 订单区域 -->
+        <div class="order-box">
+            <h2>📋 已点菜单</h2>
+            <!-- 新增：姓名、备注输入框 -->
+            <div class="input-wrap">
+                <label>顾客姓名：</label>
+                <input type="text" id="customerName" placeholder="请输入姓名">
+            </div>
+            <div class="input-wrap">
+                <label>备注信息：</label>
+                <textarea id="remark" placeholder="口味要求、忌口、送餐地址等"></textarea>
+            </div>
+
+            <div id="orderList" class="empty">暂未点菜</div>
+            <div class="submit-area">
+                <button id="submitBtn">提交订单（复制菜单）</button>
+                <button id="clearBtn">清空全部</button>
+            </div>
+            <div class="tip" id="copyTip">✅ 订单已复制到剪贴板，可以发给老板！</div>
+        </div>
+    </div>
+<script>
+// 菜单数据
+const menuData = {
+    vegetable: [
+        "西红柿炒蛋","辣椒炒蛋","葱花炒蛋","沙葱炒蛋","蒜薹炒蛋",
+        "韭黄炒蛋","炒辣椒","炝炒莲白","醋溜白菜","素炒花菜",
+        "素炒甜豆","酸辣土豆丝","耗油生菜","凉拌粉条","素炒口蘑",
+        "凉拌皮蛋/黄瓜","素炒菜心","蒸蛋","家常豆腐","酸辣西葫芦"
+    ],
+    meat: [
+        "蒜薹炒肉","辣椒炒肉","豇豆炒肉","荷兰豆炒肉","豆角炒肉",
+        "土豆片炒肉","回锅肉","花菜炒肉","甜豆炒虾仁","可乐鸡翅",
+        "红烧鸡翅","红烧排骨","西蓝花炒虾仁","黄豆焖猪脚","鱼香肉丝",
+        "红烧肉","平菇炒肉片","红烧带鱼","糖醋鱼","芹菜炒肉"
+    ],
+    onepot: [
+        "水煮鱼","水煮牛肉","烤鱼（外卖）","螺蛳粉","新疆炒米粉",
+        "火鸡面","土豆烧鸡","韩式鸡爪","煮泡面","蛋炒饭",
+        "黑椒牛肉乌冬面","炒泡面","韩式拌饭","牛肉拌饭","爆炒羊肚",
+        "麻辣香锅","捞汁小海鲜","新疆过油肉拌面"
+    ]
+}
+// 存储订单
+let order = {};
+// 渲染菜单
+function renderMenu(){
+    renderList("vegetable", menuData.vegetable);
+    renderList("meat", menuData.meat);
+    renderList("onepot", menuData.onepot);
+}
+function renderList(containerId, list){
+    const dom = document.getElementById(containerId);
+    dom.innerHTML = "";
+    list.forEach(name=>{
+        const div = document.createElement("div");
+        div.className="item";
+        div.innerHTML = `
+            <span class="item-name">${name}</span>
+            <div class="btn-group">
+                <button class="minus" onclick="changeNum('${name}',-1)">-</button>
+                <span id="num-${name}">${order[name]||0}</span>
+                <button class="add" onclick="changeNum('${name}',1)">+</button>
+                <button class="del" onclick="delItem('${name}')">×</button>
+            </div>
+        `
+        dom.appendChild(div);
+    })
+}
+// 修改数量
+function changeNum(name, delta){
+    let num = order[name] || 0;
+    num += delta;
+    if(num<0) num=0;
+    order[name] = num;
+    renderMenu();
+    renderOrder();
+}
+// 删除菜品
+function delItem(name){
+    delete order[name];
+    renderMenu();
+    renderOrder();
+}
+// 渲染订单
+function renderOrder(){
+    const orderDom = document.getElementById("orderList");
+    const entries = Object.entries(order).filter(([_,v])=>v>0);
+    if(entries.length===0){
+        orderDom.innerHTML = `<div class="empty">暂未点菜</div>`;
+        return;
+    }
+    let html = "";
+    entries.forEach(([name,count])=>{
+        html += `<div class="order-item">✅ ${name} × ${count}</div>`
+    })
+    orderDom.innerHTML = html;
+}
+
+// 提交订单：生成文本并复制（包含姓名+备注）
+function submitOrder(){
+    const entries = Object.entries(order).filter(([_,v])=>v>0);
+    const name = document.getElementById("customerName").value.trim();
+    const remark = document.getElementById("remark").value.trim();
+
+    if(entries.length ===0){
+        alert("请先点菜！");
+        return;
+    }
+    let text = "=====顾客订单=====\n";
+    if(name){
+        text += `顾客：${name}\n`;
+    }
+    if(remark){
+        text += `备注：${remark}\n`;
+    }
+    text += "------------------\n";
+    entries.forEach(([name,count])=>{
+        text += `${name} × ${count}\n`
+    })
+    text += "==================";
+    // 复制剪贴板
+    navigator.clipboard.writeText(text).then(()=>{
+        const tip = document.getElementById("copyTip");
+        tip.style.display = "block";
+        setTimeout(()=>{tip.style.display="none"},2000);
+    }).catch(err=>{
+        console.error(err);
+        alert("复制失败，请手动复制：\n"+text);
+    })
+}
+
+// 清空全部订单，同时清空姓名和备注
+function clearAll(){
+    order = {};
+    document.getElementById("customerName").value = "";
+    document.getElementById("remark").value = "";
+    renderMenu();
+    renderOrder();
+}
+
+// 绑定按钮事件
+document.getElementById("submitBtn").onclick = submitOrder;
+document.getElementById("clearBtn").onclick = clearAll;
+
+renderMenu();
+renderOrder();
+</script>
+</body>
+</html>
